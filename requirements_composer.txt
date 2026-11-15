@@ -1,0 +1,8 @@
+# Everything for focus_buddy_composer.py + server.py. Install with:
+#   pip install -r requirements.txt            (his: mediapipe, ultralytics, pyserial)
+#   pip install -r requirements_composer.txt   (ours)
+fastapi
+uvicorn
+pygame
+requests
+numpy

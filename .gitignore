@@ -1,0 +1,20 @@
+# secrets
+.env
+spotify_token.json
+
+# environment and caches
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# downloaded models (re-download on first run)
+face_landmarker.task
+*.pt
+
+# generated or personal
+focus_log.csv
+voice/
+music/*.mp3
+music/*.wav
+music/*.ogg

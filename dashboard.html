@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Composer</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e3e1db;
+    --focused: #3f8f5b; --phone: #c8453c; --looking: #d89a2b; --away: #8d8b86; --drowsy: #7a5aa6;
+    --accent: #1d1d1b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px;
+           border-bottom: 1px solid var(--line); background: var(--card); }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: .2px; }
+  nav { display: flex; gap: 4px; }
+  nav button { background: none; border: 0; padding: 8px 14px; font: inherit; color: var(--muted);
+               border-radius: 8px; cursor: pointer; }
+  nav button.on { background: var(--bg); color: var(--ink); font-weight: 600; }
+  main { max-width: 980px; margin: 0 auto; padding: 28px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px; margin-bottom: 18px; }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .row > * { flex: 1 1 260px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 14px; font-weight: 600; }
+  .big { font-size: 40px; font-weight: 600; line-height: 1.1; }
+  .sub { color: var(--muted); font-size: 14px; }
+  button.primary { background: var(--accent); color: #fff; border: 0; padding: 11px 22px; border-radius: 10px;
+                   font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary:disabled { opacity: .4; cursor: default; }
+  button.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); padding: 9px 16px;
+                 border-radius: 10px; font: inherit; cursor: pointer; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: baseline; }
+  .levels { display: flex; gap: 6px; margin-top: 14px; }
+  .levels div { flex: 1; height: 14px; border-radius: 4px; background: var(--line); transition: background .2s; }
+  .levels div.on { background: var(--phone); }
+  .levels div.on.l1 { background: #d9a441; } .levels div.on.l2 { background: #d9822b; }
+  .levels div.on.l3 { background: #cf5f35; } .levels div.on.l4 { background: #b9322b; }
+  .bar { display: flex; height: 34px; border-radius: 8px; overflow: hidden; background: var(--line); }
+  .bar span { height: 100%; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; }
+  .stat { font-size: 28px; font-weight: 600; }
+  textarea, select, input[type=text] { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid var(--line);
+                                       border-radius: 8px; background: #fff; color: var(--ink); }
+  textarea { min-height: 70px; resize: vertical; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  .note { font-size: 13px; color: var(--muted); }
+  .err { color: var(--phone); font-size: 13px; margin-top: 8px; }
+  .ok { color: var(--focused); font-size: 13px; margin-top: 8px; }
+  .hidden { display: none; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .sim { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .banner { padding: 10px 14px; border-radius: 10px; background: #fff6e0; border: 1px solid #f0dca8;
+            margin-bottom: 18px; font-size: 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Focus Composer</h1>
+  <nav>
+    <button data-tab="live" class="on">Live</button>
+    <button data-tab="summary">Summary</button>
+    <button data-tab="sound">Sound</button>
+  </nav>
+</header>
+
+<main>
+  <!-- LIVE -->
+  <section id="tab-live">
+    <div class="card">
+      <div class="row">
+        <div>
+          <h2>Session</h2>
+          <div class="big" id="clock">0:00</div>
+          <div class="sub" id="sessionNote">Not started</div>
+          <div style="margin-top:16px; display:flex; gap:10px;">
+            <button class="primary" id="startBtn">Start session</button>
+            <button class="ghost hidden" id="stopBtn">Stop and see summary</button>
+          </div>
+        </div>
+        <div>
+          <h2>Right now</h2>
+          <div class="big"><span class="dot" id="stateDot" style="background:var(--away)"></span><span id="stateName">idle</span></div>
+          <div class="sub" id="levelText">Level 0</div>
+          <div class="levels" id="levels"><div></div><div></div><div></div><div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Timeline</h2>
+      <div class="bar" id="liveBar"></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <div class="card">
+      <h2>Events</h2>
+      <table><thead><tr><th>Time</th><th>State</th><th>Level</th></tr></thead><tbody id="events"></tbody></table>
+      <div class="note" id="noEvents">Nothing yet. Start a session.</div>
+    </div>
+
+    <details class="card">
+      <summary>Simulate (no camera needed)</summary>
+      <div class="sim" id="sim"></div>
+      <p class="note">These buttons report a state to the backend, the same way the detection script will.</p>
+    </details>
+  </section>
+
+  <!-- SUMMARY -->
+  <section id="tab-summary" class="hidden">
+    <div class="row">
+      <div class="card"><h2>Focused</h2><div class="stat" id="sFocus">0%</div></div>
+      <div class="card"><h2>Phone pickups</h2><div class="stat" id="sPickups">0</div></div>
+      <div class="card"><h2>Peak level</h2><div class="stat" id="sPeak">0</div></div>
+      <div class="card"><h2>Duration</h2><div class="stat" id="sDur">0:00</div></div>
+    </div>
+    <div class="card">
+      <h2>Where the time went</h2>
+      <div class="bar" id="sumBar"></div>
+      <table style="margin-top:14px"><thead><tr><th>State</th><th>Time</th><th>Share</th></tr></thead><tbody id="sumTable"></tbody></table>
+    </div>
+    <div class="card">
+      <h2>Session timeline</h2>
+      <div class="bar" id="sumTimeline"></div>
+      <div class="note" style="margin-top:10px">Left is the start of the session, right is now (or the end).</div>
+    </div>
+  </section>
+
+  <!-- SOUND -->
+  <section id="tab-sound" class="hidden">
+    <div class="card">
+      <h2>Spoken lines</h2>
+      <p class="note">One line per row. A random line from the level is spoken when that level is reached and then again while it holds. Keep lines short.</p>
+      <div id="linesEditor"></div>
+    </div>
+    <div class="row">
+      <div class="card">
+        <h2>Voice</h2>
+        <label for="voice">ElevenLabs voice</label>
+        <select id="voice"></select>
+        <div class="note" id="voiceNote"></div>
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="1" step="0.05" style="width:100%">
+      </div>
+      <div class="card">
+        <h2>Music</h2>
+        <label for="musicSource">Music source</label>
+        <select id="musicSource">
+          <option value="local">This computer: music/track.mp3</option>
+          <option value="spotify">Spotify (Premium, needs login)</option>
+        </select>
+        <div id="spotifyBox" class="hidden">
+          <label for="spotifyUri">Spotify link (track, playlist or album)</label>
+          <input type="text" id="spotifyUri" placeholder="https://open.spotify.com/track/...">
+          <div class="row" style="gap:10px">
+            <div><label for="spotifyStart">Loop start (m:ss)</label><input type="text" id="spotifyStart" placeholder="0:00"></div>
+            <div><label for="spotifyEnd">Loop end (m:ss, blank = whole track)</label><input type="text" id="spotifyEnd" placeholder="1:00"></div>
+          </div>
+          <p class="note">First time: run <code>python spotify_player.py --login</code> in the terminal. Spotify mode plays one track whose volume follows the level.</p>
+        </div>
+        <label>Your own music (MP3, WAV or OGG, up to 25 MB)</label>
+        <input type="file" id="musicFile" accept=".mp3,.wav,.ogg,audio/*">
+        <div class="note" id="musicInfo"></div>
+        <label for="musicMode">How the local music follows the level</label>
+        <select id="musicMode">
+          <option value="sections">Sections: each level plays its own part of the track</option>
+          <option value="volume">Volume: one looping track that gets louder</option>
+        </select>
+        <p class="note">Local mode plays the uploaded track, split into four parts, one per level. Restart the server after switching the source.</p>
+      </div>
+    </div>
+    <button class="primary" id="saveSound">Save and generate voices</button>
+    <div id="saveMsg"></div>
+  </section>
+</main>
+
+<script>
+const COLORS = {"focused":"var(--focused)","on phone":"var(--phone)","looking away":"var(--looking)","away":"var(--away)","drowsy":"var(--drowsy)"};
+const STATES = Object.keys(COLORS);
+const $ = id => document.getElementById(id);
+let tab = "live", lastStatus = null, summaryCache = null;
+
+// ---------- tabs ----------
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  ["live","summary","sound"].forEach(t => $("tab-"+t).classList.toggle("hidden", t !== tab));
+  if (tab === "sound") loadSound();
+  refresh();
+});
+
+// ---------- helpers ----------
+const mmss = s => { s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
+async function api(path, method="GET", body) {
+  const r = await fetch(path, {method, headers: body ? {"Content-Type":"application/json"} : {}, body: body ? JSON.stringify(body) : undefined});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || r.statusText);
+  return data;
+}
+function bar(el, segments, total) {
+  el.innerHTML = "";
+  if (!total) return;
+  segments.forEach(s => {
+    const w = 100 * (s.end - s.start) / total;
+    if (w <= 0) return;
+    const span = document.createElement("span");
+    span.style.width = w + "%"; span.style.background = COLORS[s.state] || "var(--away)";
+    span.title = `${s.state}: ${mmss(s.start)} to ${mmss(s.end)}`;
+    el.appendChild(span);
+  });
+}
+
+// ---------- live ----------
+$("legend").innerHTML = STATES.map(s => `<span><span class="dot" style="background:${COLORS[s]}"></span>${s}</span>`).join("");
+$("sim").innerHTML = STATES.map(s => `<button class="ghost" data-s="${s}">${s}</button>`).join("");
+$("sim").onclick = e => { if (e.target.dataset.s) api("/state","POST",{state:e.target.dataset.s}); };
+$("startBtn").onclick = async () => { await api("/start","POST"); summaryCache = null; refresh(); };
+$("stopBtn").onclick = async () => { await api("/stop","POST"); refresh(); document.querySelector('[data-tab=summary]').click(); };
+
+function renderStatus(st) {
+  lastStatus = st;
+  $("startBtn").classList.toggle("hidden", st.running);
+  $("stopBtn").classList.toggle("hidden", !st.running);
+  $("clock").textContent = mmss(st.elapsed);
+  $("sessionNote").textContent = st.running
+    ? (st.calibrating ? "Calibrating: look at your screen" : "Tracking")
+    : (st.elapsed > 0 ? "Session ended" : "Not started");
+  const name = !st.running ? "idle" : (st.calibrating ? "calibrating" : st.state);
+  $("stateName").textContent = name;
+  $("stateDot").style.background = COLORS[st.state] && st.running ? COLORS[st.state] : "var(--away)";
+  $("levelText").textContent = "Level " + st.level + (st.level >= 4 ? " (maximum)" : "");
+  [...$("levels").children].forEach((d, i) => {
+    d.className = i < st.level ? "on l" + (i+1) : "";
+  });
+}
+
+async function refresh() {
+  try {
+    if (tab === "live" || tab === "summary") {
+      const s = await api("/summary");
+      summaryCache = s;
+      if (tab === "live") renderLive(s); else renderSummary(s);
+    }
+  } catch (e) { /* server busy */ }
+}
+function renderLive(s) {
+  bar($("liveBar"), s.timeline, s.duration);
+  const ev = s.events.slice().reverse().slice(0, 12);
+  $("noEvents").classList.toggle("hidden", ev.length > 0);
+  $("events").innerHTML = ev.map(e =>
+    `<tr><td>${e.time}</td><td><span class="dot" style="background:${COLORS[e.state]}"></span>${e.state}</td><td>${e.level}</td></tr>`).join("");
+}
+function renderSummary(s) {
+  $("sFocus").textContent = Math.round(s.percent["focused"]) + "%";
+  $("sPickups").textContent = s.phone_pickups;
+  $("sPeak").textContent = s.peak_level;
+  $("sDur").textContent = mmss(s.duration);
+  const total = Object.values(s.seconds).reduce((a,b) => a+b, 0);
+  const segs = []; let at = 0;
+  STATES.forEach(k => { if (s.seconds[k] > 0) { segs.push({state:k,start:at,end:at+s.seconds[k]}); at += s.seconds[k]; } });
+  bar($("sumBar"), segs, total);
+  $("sumTable").innerHTML = STATES.map(k =>
+    `<tr><td><span class="dot" style="background:${COLORS[k]}"></span>${k}</td><td>${mmss(s.seconds[k])}</td><td>${Math.round(s.percent[k])}%</td></tr>`).join("");
+  bar($("sumTimeline"), s.timeline, s.duration);
+}
+
+// live updates: stream for status, light polling for charts
+const es = new EventSource("/events");
+es.onmessage = m => { renderStatus(JSON.parse(m.data).status); };
+setInterval(refresh, 1000);
+api("/status").then(renderStatus);
+refresh();
+
+// ---------- sound ----------
+function showMusicInfo(m) {
+  if (!m.file) { $("musicInfo").textContent = "No track uploaded yet."; return; }
+  let t = `Current track: ${m.file} (${m.size_mb} MB)`;
+  if (m.track_seconds) {
+    t += `, ${mmss(m.track_seconds)} long. Sections: ` +
+      Object.entries(m.sections || {}).map(([l, r]) => `L${l} ${mmss(r[0])} to ${mmss(r[1])}`).join(", ");
+  }
+  $("musicInfo").textContent = t;
+}
+$("musicFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $("musicInfo").textContent = "Uploading...";
+  try {
+    const r = await fetch("/music?name=" + encodeURIComponent(f.name), {method: "POST", body: f});
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    showMusicInfo(data);
+  } catch (err) { $("musicInfo").innerHTML = `<span class="err">${err.message}</span>`; }
+  e.target.value = "";
+};
+let soundLoaded = false;
+async function loadSound() {
+  if (soundLoaded) return;
+  soundLoaded = true;
+  const s = await api("/settings");
+  const names = {"1":"Level 1 (first nudge)","2":"Level 2","3":"Level 3","4":"Level 4 (maximum)"};
+  $("linesEditor").innerHTML = ["1","2","3","4"].map(l => `
+    <label for="lines${l}">${names[l]}</label>
+    <textarea id="lines${l}" data-level="${l}">${(s.lines[l] || []).join("\n")}</textarea>
+    <button class="ghost" data-preview="${l}" style="margin-top:6px">Preview</button>`).join("");
+  $("linesEditor").onclick = async e => {
+    const l = e.target.dataset.preview; if (!l) return;
+    const first = $("lines"+l).value.split("\n").map(x => x.trim()).filter(Boolean)[0];
+    try { await api("/preview","POST",{text:first}); $("saveMsg").innerHTML = ""; }
+    catch (err) { $("saveMsg").innerHTML = `<div class="err">${err.message}</div>`; }
+  };
+  $("volume").value = s.volume ?? 0.8;
+  $("musicMode").value = s.music_mode || "sections";
+  $("musicSource").value = s.music_source || "local";
+  $("spotifyUri").value = s.spotify_uri || "";
+  $("spotifyStart").value = s.spotify_start || "";
+  $("spotifyEnd").value = s.spotify_end || "";
+  showSpotify();
+  api("/music").then(showMusicInfo).catch(() => {});
+  try {
+    const v = await api("/voices");
+    $("voice").innerHTML = v.map(x => `<option value="${x.id}">${x.name}</option>`).join("");
+    $("voice").value = s.voice_id;
+    if ($("voice").value !== s.voice_id) $("voiceNote").textContent = "Current voice is not in this list.";
+  } catch (err) {
+    $("voice").innerHTML = `<option value="${s.voice_id}">${s.voice_id} (current)</option>`;
+    $("voiceNote").textContent = "Could not load voices: " + err.message;
+  }
+}
+function showSpotify() { $("spotifyBox").classList.toggle("hidden", $("musicSource").value !== "spotify"); }
+$("musicSource").onchange = showSpotify;
+$("saveSound").onclick = async () => {
+  const lines = {};
+  document.querySelectorAll("#linesEditor textarea").forEach(t => {
+    lines[t.dataset.level] = t.value.split("\n").map(x => x.trim()).filter(Boolean).map(x => x.slice(0, 100));
+  });
+  $("saveMsg").innerHTML = `<div class="note">Saving and generating voices...</div>`;
+  try {
+    const r = await api("/settings","POST",{lines, voice_id:$("voice").value,
+      volume:parseFloat($("volume").value), music_mode:$("musicMode").value,
+      music_source:$("musicSource").value, spotify_uri:$("spotifyUri").value.trim(),
+      spotify_start:$("spotifyStart").value.trim(), spotify_end:$("spotifyEnd").value.trim()});
+    $("saveMsg").innerHTML = r.error
+      ? `<div class="err">Saved, but the voices were not generated: ${r.error}</div>`
+      : `<div class="ok">Saved. ${r.generated} voice files ready.</div>`;
+  } catch (err) { $("saveMsg").innerHTML = `<div class="err">${err.message}</div>`; }
+};
+</script>
+</body>
+</html>

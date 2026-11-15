@@ -1,0 +1,5 @@
+# Focus Buddy - laptop side. Install with:  pip install -r requirements.txt
+# Works with Python 3.10 - 3.13 (Windows, Apple-silicon Macs and Linux).
+mediapipe>=0.10.14      # face landmarks, head direction, eye "blendshapes"
+ultralytics>=8.4.0      # YOLO26 phone detection (installs PyTorch and OpenCV too)
+pyserial>=3.5           # talks to the Arduino over USB
