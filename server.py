@@ -106,7 +106,7 @@ def status():
     return {
         "running": S.running, "calibrating": S.calibrating(),
         "state": S.shown_state, "level": S.level, "score": round(S.esc.score, 3),
-        "elapsed": round(S.elapsed(), 1), "peak": S.peak,
+        "elapsed": round(S.elapsed(), 1), "peak": S.peak, "started": int(S.t0),
         "calibrate_secs": CALIBRATE_SECS, "audio": audio is not None,
     }
 
@@ -117,7 +117,7 @@ def summary():
     if S.running and S.shown_state:
         segs.append({"state": S.shown_state, "start": round(S.seg_start, 1), "end": round(S.elapsed(), 1)})
     return {
-        "duration": round(S.elapsed(), 1), "peak_level": S.peak, "phone_pickups": S.pickups,
+        "duration": round(S.elapsed(), 1), "peak_level": S.peak, "phone_pickups": S.pickups, "started": int(S.t0),
         "seconds": {k: round(v, 1) for k, v in S.durations.items()},
         "percent": {k: (round(100 * v / total, 1) if total else 0.0) for k, v in S.durations.items()},
         "timeline": segs, "events": S.events[-200:],
