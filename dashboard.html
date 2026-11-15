@@ -164,6 +164,26 @@
       <div class="bar" id="sumBar"></div>
       <table style="margin-top:14px"><thead><tr><th>State</th><th>Time</th><th>Share</th></tr></thead><tbody id="sumTable"></tbody></table>
     </div>
+    <div class="card" id="researchCard">
+      <h2>Research and tuning</h2>
+      <div class="note" style="margin:0 0 12px">The escalation design, what we measured, and why each number was chosen.</div>
+      <table><thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead><tbody>
+        <tr><td>Grace time</td><td>1.5 s</td><td>A blink or a quick glance should not count as distraction.</td></tr>
+        <tr><td>Rise time</td><td>20 s to level 4 (10 s for demos)</td><td>Gentle at first, so the first levels nudge instead of nag.</td></tr>
+        <tr><td>Fall time</td><td>6 s</td><td>Calms down slower than it rises, so the level does not flicker when you drift back.</td></tr>
+        <tr><td>Level thresholds</td><td>0.05, 0.30, 0.60, 0.85</td><td>Spaced so levels 1 and 2 are easy to reach and level 4 means sustained distraction.</td></tr>
+        <tr><td>Hysteresis</td><td>0.05</td><td>Stops the level bouncing at a boundary.</td></tr>
+        <tr><td>Leaving the desk ("away")</td><td>Away does not escalate</td><td>Leaving the desk is a break, not a distraction.</td></tr>
+      </tbody></table>
+      <h2 style="margin-top:20px">Measured in our testing</h2>
+      <div class="row stats" style="margin-top:8px">
+        <div class="card" style="padding:14px"><h2>False alerts per 10 min, before tuning</h2><input id="faBefore" type="number" min="0" step="0.1" placeholder="e.g. 6" style="font:inherit;font-size:22px;width:100%;border:0;border-bottom:1px solid var(--line-strong);background:transparent"></div>
+        <div class="card" style="padding:14px"><h2>False alerts per 10 min, after tuning</h2><input id="faAfter" type="number" min="0" step="0.1" placeholder="e.g. 1" style="font:inherit;font-size:22px;width:100%;border:0;border-bottom:1px solid var(--line-strong);background:transparent"></div>
+        <div class="card" style="padding:14px"><h2>Reduction</h2><div class="big" id="faDelta" style="font-size:28px">-</div></div>
+        <div class="card" style="padding:14px"><h2>This session: time to level 4</h2><div class="big" id="tToPeak" style="font-size:28px">-</div></div>
+      </div>
+      <div class="note" style="margin-top:10px">Type your counts from the rehearsal runs. They are kept in this browser. The escalation curve above shows how the level rose and fell in this session.</div>
+    </div>
     <div class="card">
       <h2>Session timeline</h2>
       <div class="bar" id="sumTimeline"></div>
@@ -325,6 +345,7 @@ function renderSummary(s) {
   bar($("sumTimeline"), s.timeline, s.duration);
   drawCurve(s);
   drawFullScore(s);
+  updateResearch(s);
 }
 
 // live updates: stream for status, light polling for charts
@@ -628,6 +649,20 @@ $("full").addEventListener("click", e => {
   const t = Math.max(0, Math.min(f.dur - 0.1, row * f.rowSecs + (x - f.L) / f.px));
   startPlayback(t);
 });
+
+
+// ---------- research panel ----------
+function updateResearch(s) {
+  const b = parseFloat($("faBefore").value), a = parseFloat($("faAfter").value);
+  $("faDelta").textContent = b > 0 && a >= 0 ? "-" + Math.round((1 - a / b) * 100) + "%" : "-";
+  try { localStorage.setItem("fa_before", $("faBefore").value); localStorage.setItem("fa_after", $("faAfter").value); } catch (e) {}
+  if (s) {
+    const ev = (s.events || []), first = ev.find(e => e.level > 0), peak = ev.find(e => e.level >= 4);
+    $("tToPeak").textContent = first && peak ? Math.round(peak.t - first.t) + " s" : "-";
+  }
+}
+try { $("faBefore").value = localStorage.getItem("fa_before") || ""; $("faAfter").value = localStorage.getItem("fa_after") || ""; } catch (e) {}
+$("faBefore").oninput = $("faAfter").oninput = () => updateResearch(summaryCache);
 
 function scoreLoop() {
   const now = Date.now();
